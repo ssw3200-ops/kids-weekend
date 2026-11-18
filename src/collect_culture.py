@@ -30,13 +30,14 @@ def collect(key: str, regions: list[dict], start: date, end: date) -> list[Event
     events: list[Event] = []
     raw, areas, msg = 0, [], ""
     page = 1
-    while page <= 30:
+    total = None
+    while page <= 100:  # 페이지 크기가 10으로 고정돼도 최대 1,000건까지 (하루 한도 1만 건 내)
         params = {
             "serviceKey": key,
             "from": start.strftime("%Y%m%d"),
             "to": end.strftime("%Y%m%d"),
-            "cPage": page,
-            "rows": 100,
+            "cPage": page, "pageNo": page,
+            "rows": 100, "numOfRows": 100,
         }
         content = http_get(URL, params).content
         root = ET.fromstring(content)
@@ -45,6 +46,9 @@ def collect(key: str, regions: list[dict], start: date, end: date) -> list[Event
         if page == 1 and not rows:
             msg = msg or content[:150].decode("utf-8", "ignore")
         raw += len(rows)
+        if total is None:
+            t = root.findtext(".//totalCount")
+            total = int(t) if t and t.strip().isdigit() else 0
         for it in rows:
             get = lambda k: (it.findtext(FIELD[k]) or "").strip()  # noqa: E731
             area_text = f"{get('area')} {get('sigungu')} {get('place')}"
@@ -68,8 +72,8 @@ def collect(key: str, regions: list[dict], start: date, end: date) -> list[Event
                 link=get("url") or "https://search.naver.com/search.naver?query=" + quote(title),
                 genre=get("genre") or "공연·전시",
             ))
-        if len(rows) < 100:
+        if not rows or raw >= (total or 0):
             break
         page += 1
-    DEBUG = f"원본 {raw}건, 응답 '{msg[:60]}', 지역값 예: {areas}"
+    DEBUG = f"원본 {raw}/{total}건, 응답 '{msg[:60]}', 지역값 예: {areas}"
     return events
