@@ -22,6 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import collect_culture  # noqa: E402
 import collect_kopis  # noqa: E402
 import collect_manual  # noqa: E402
+import collect_std  # noqa: E402
 import collect_tour  # noqa: E402
 import draft  # noqa: E402
 import images  # noqa: E402
@@ -98,6 +99,8 @@ def main() -> None:
             ("tour", "DATA_GO_KR_KEY", collect_tour.collect),
             ("kopis", "KOPIS_KEY", collect_kopis.collect),
             ("culture", "DATA_GO_KR_KEY", collect_culture.collect),
+            ("std_event", "DATA_GO_KR_KEY", lambda k, a, b: collect_std.collect("std_event", k, a, b)),
+            ("std_festival", "DATA_GO_KR_KEY", lambda k, a, b: collect_std.collect("std_festival", k, a, b)),
         ]
         for name, env, fn in sources:
             key = os.environ.get(env, "").strip()
@@ -110,6 +113,8 @@ def main() -> None:
                 status[name] = f"{len(got)}건"
                 if name == "culture" and collect_culture.DEBUG:
                     status[name] += f" ({collect_culture.DEBUG})"
+                if name in collect_std.DEBUG:
+                    status[name] += f" ({collect_std.DEBUG[name]})"
             except Exception as e:  # noqa: BLE001
                 status[name] = f"실패: {e}"[:200]
                 print(f"[경고] {name} 실패: {e}")
@@ -127,12 +132,13 @@ def main() -> None:
             c[0] += 1
             continue
         e.score = score(e, kw, wk_end)
-        if e.score < 0:
+        # 아이 행사로 볼 근거가 있어야 페이지에 노출 (축제는 가족 단위가 많아 기본 포함)
+        if e.score < 0 or (e.score < 3 and e.source not in ("tour", "std_festival")):
             c[1] += 1
             continue
         e.category = category_of(e.genre, e.title, e.source)
         picked.append(e)
-    status["dropped"] = str({k: f"기간밖 {v[0]}, 제외어 {v[1]}" for k, v in drop.items()})
+    status["dropped"] = str({k: f"기간밖 {v[0]}, 아이행사아님 {v[1]}" for k, v in drop.items()})
     picked = dedup(picked)
     status["final_by_source"] = str({s_: sum(1 for e in picked if e.source == s_) for s_ in drop})
     picked.sort(key=lambda e: (-e.score, e.end))

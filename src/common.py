@@ -156,6 +156,6 @@ def category_of(genre: str, title: str, source: str) -> str:
         return "전시"
     if any(k in g + t for k in ("체험", "교육", "만들기", "클래스", "캠프", "워크숍")):
         return "체험·교육"
-    if source == "tour" or "축제" in g + t or "행사" in g:
+    if source in ("tour", "std_festival") or "축제" in g + t or "행사" in g:
         return "축제·행사"
     return "기타"

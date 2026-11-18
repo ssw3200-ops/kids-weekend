@@ -25,56 +25,82 @@ FIELD = {
 DEBUG = ""  # build.py가 상태에 같이 기록 (0건일 때 원인 파악용)
 
 
+# 페이지 파라미터 이름이 명세마다 달라서 실제로 다음 페이지가 나오는 조합을 자동으로 찾습니다.
+PAGING = [("PageNo", "numOfrows"), ("pageNo", "numOfRows"), ("cPage", "rows"), ("page", "perPage")]
+
+
+def _fetch(key: str, start: date, end: date, pk: str, rk: str, page: int):
+    params = {"serviceKey": key, "from": start.strftime("%Y%m%d"), "to": end.strftime("%Y%m%d"),
+              pk: page, rk: 100}
+    content = http_get(URL, params).content
+    root = ET.fromstring(content)
+    return root, root.findall(".//item"), content
+
+
+def _sig(rows) -> tuple:
+    return tuple((r.findtext("seq") or r.findtext("title") or "") for r in rows[:3])
+
+
 def collect(key: str, start: date, end: date) -> list[Event]:
     global DEBUG
     events: list[Event] = []
-    raw, areas, msg, samples = 0, [], "", []
+    seen: set[str] = set()
+    raw, areas, msg = 0, [], ""
+
+    # 1) 페이지 파라미터 조합 찾기: 1쪽과 2쪽 결과가 다르면 성공
+    chosen, first = None, None
+    for pk, rk in PAGING:
+        root1, rows1, content = _fetch(key, start, end, pk, rk, 1)
+        if first is None:
+            first = (root1, rows1)
+            msg = root1.findtext(".//resultMsg") or content[:120].decode("utf-8", "ignore")
+        if not rows1:
+            continue
+        _, rows2, _ = _fetch(key, start, end, pk, rk, 2)
+        if not rows2 or _sig(rows2) != _sig(rows1):
+            chosen = (pk, rk, root1, rows1)
+            break
+    if chosen is None:  # 다 실패하면 1쪽만 사용
+        pk, rk = PAGING[0]
+        root, rows = first if first else (None, [])
+    else:
+        pk, rk, root, rows = chosen
+    t = root.findtext(".//totalCount") if root is not None else None
+    total = int(t) if t and t.strip().isdigit() else 0
+
     page = 1
-    total = None
-    while page <= 100:  # 페이지 크기가 10으로 고정돼도 최대 1,000건까지 (하루 한도 1만 건 내)
-        params = {
-            "serviceKey": key,
-            "from": start.strftime("%Y%m%d"),
-            "to": end.strftime("%Y%m%d"),
-            "cPage": page, "pageNo": page,
-            "rows": 100, "numOfRows": 100,
-        }
-        content = http_get(URL, params).content
-        root = ET.fromstring(content)
-        rows = root.findall(".//item")
-        msg = msg or (root.findtext(".//resultMsg") or root.findtext(".//returnAuthMsg") or "")
-        if page == 1 and not rows:
-            msg = msg or content[:150].decode("utf-8", "ignore")
-        raw += len(rows)
-        if total is None:
-            t = root.findtext(".//totalCount")
-            total = int(t) if t and t.strip().isdigit() else 0
+    while True:
+        new = 0
         for it in rows:
             get = lambda k: (it.findtext(FIELD[k]) or "").strip()  # noqa: E731
+            uid = get("title") + get("start") + get("place")
+            if uid in seen:
+                continue
+            seen.add(uid)
+            new += 1
+            raw += 1
             region = sido_of(get("area")) or sido_of(get("place"))
             if not region:
                 if len(areas) < 5:
                     areas.append(f"{get('area')} {get('place')}".strip()[:20] or "(빈값)")
                 continue
             s, e = parse_ymd(get("start")), parse_ymd(get("end"))
-            if len(samples) < 3:
-                samples.append(f"{get('title')[:12]}|{get('start')}~{get('end')}|{get('genre')}")
             if not s or not e:
                 continue
             title = get("title")
+            sg = get("sigungu")
             events.append(Event(
-                source="culture",
-                title=title,
-                region=region, city=get("sigungu") if get("sigungu").endswith(("시", "군", "구")) else "",
-                start=s, end=e,
-                place=get("place"),
-                price=get("price"),
+                source="culture", title=title, region=region,
+                city=sg if sg.endswith(("시", "군", "구")) else "",
+                start=s, end=e, place=get("place"), price=get("price"),
                 image=get("image").replace("http://", "https://"),
                 link=get("url") or "https://search.naver.com/search.naver?query=" + quote(title),
                 genre=get("genre") or "공연·전시",
             ))
-        if not rows or raw >= (total or 0):
+        if chosen is None or not rows or new == 0 or raw >= total or page >= 120:
             break
         page += 1
-    DEBUG = f"원본 {raw}/{total}건, 응답 '{msg[:60]}', 지역 못 찾은 예: {areas}, 샘플: {samples}"
+        _, rows, _ = _fetch(key, start, end, pk, rk, page)
+    DEBUG = f"페이지키 {pk if chosen else '없음'}, 원본 {raw}/{total}건, 응답 '{msg[:40]}'" + (
+        f", 지역 못 찾음: {areas}" if areas else "")
     return events
