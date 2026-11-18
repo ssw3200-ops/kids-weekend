@@ -45,13 +45,16 @@ def _pick(it: dict, names: list[str]) -> str:
 def collect(name: str, key: str, start: date, end: date) -> list[Event]:
     spec = SPECS[name]
     events: list[Event] = []
-    raw, total, keys = 0, 0, []
+    raw, total, keys, hmsg = 0, 0, [], ""
     page = 1
     while page <= 60:
         params = {"serviceKey": key, "pageNo": page, "numOfRows": 1000, "type": "json"}
         payload = http_get(BASE + spec["path"], params, timeout=40).json()
         resp = payload.get("response") or {}
         header = resp.get("header") or {}
+        hmsg = hmsg or f"{header.get('resultCode')} {header.get('resultMsg')}"
+        if not resp:
+            hmsg = hmsg or str(payload)[:120]
         if str(header.get("resultCode", "00")) not in ("00", "0"):
             if header.get("resultCode") == "03":  # NODATA
                 break
@@ -96,5 +99,5 @@ def collect(name: str, key: str, start: date, end: date) -> list[Event]:
         if not items or raw >= total:
             break
         page += 1
-    DEBUG[name] = f"원본 {raw}/{total}건" + ("" if events else f", 필드: {keys}")
+    DEBUG[name] = f"원본 {raw}/{total}건, 응답 {hmsg}" + ("" if events else f", 필드: {keys}")
     return events
