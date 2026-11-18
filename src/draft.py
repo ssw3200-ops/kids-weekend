@@ -120,7 +120,9 @@ def build(events: list[Event], regions: list[str], wk_start: date, wk_end: date,
     tip = rnd.choice(TIPS)
     images.append((f"{img_no:02d}_아빠꿀팁.png", "마지막 구분선 바로 아래 (마무리 인사 위)"))
     if page_url:
-        parts.append(f"📌 매주 자동으로 업데이트되는 행사 모아보기 페이지도 만들어 뒀어요!\n휴대폰에서 지역·무료만 골라 볼 수 있어요 👉 {page_url}")
+        parts.append("📌 개발자 아빠가 직접 만든 \"전국 아이랑 행사 모아보기\" 페이지도 있어요!\n"
+                     "지역·분야·무료만 골라 볼 수 있고 매주 자동으로 업데이트돼요.\n"
+                     "댓글 남겨주시면 비밀댓글로 링크랑 비밀번호 보내드릴게요 💌")
     parts.append(rnd.choice(OUTROS))
     tags = ["#" + reg + t for reg in regions for t in ("아이랑갈만한곳", "주말행사", "가볼만한곳")]
     tags += ["#아이랑주말", "#주말나들이", "#아이랑오늘뭐하지", "#어린이공연", "#가족나들이"]

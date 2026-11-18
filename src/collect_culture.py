@@ -7,6 +7,7 @@
 """
 from __future__ import annotations
 
+import html
 import xml.etree.ElementTree as ET
 from datetime import date
 from urllib.parse import quote
@@ -72,7 +73,7 @@ def collect(key: str, start: date, end: date) -> list[Event]:
     while True:
         new = 0
         for it in rows:
-            get = lambda k: (it.findtext(FIELD[k]) or "").strip()  # noqa: E731
+            get = lambda k: html.unescape(it.findtext(FIELD[k]) or "").strip()  # noqa: E731
             uid = get("title") + get("start") + get("place")
             if uid in seen:
                 continue

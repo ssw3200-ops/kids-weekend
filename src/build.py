@@ -26,6 +26,7 @@ import collect_std  # noqa: E402
 import collect_tour  # noqa: E402
 import draft  # noqa: E402
 import images  # noqa: E402
+import lock  # noqa: E402
 from common import (CATEGORIES, KST, SIDO, Event, category_of, overlaps, parse_ymd,  # noqa: E402
                     today_kst, upcoming_weekend)
 
@@ -160,7 +161,22 @@ def main() -> None:
         "sample": args.sample,
         "events": [e.to_dict() for e in picked],
     }
-    (DOCS / "data.json").write_text(json.dumps(page, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    pw = os.environ.get("PAGE_PASSWORD", "").strip()
+    plain, locked = DOCS / "data.json", DOCS / "data.enc.json"
+    if pw:
+        locked.write_text(json.dumps(lock.encrypt(page, pw)), encoding="utf-8")
+        plain.unlink(missing_ok=True)
+        print("페이지 데이터 비밀번호 잠금 완료")
+    elif args.sample:
+        plain.write_text(json.dumps(page, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+        locked.unlink(missing_ok=True)
+    else:
+        # 비밀번호 없이 실제 데이터를 공개하지 않음
+        plain.unlink(missing_ok=True)
+        locked.unlink(missing_ok=True)
+        print("[경고] PAGE_PASSWORD 시크릿이 없어 페이지 데이터를 올리지 않았습니다.")
+    (DOCS / "status.json").write_text(json.dumps({"updated": now, "status": status, "count": len(picked)},
+                                                 ensure_ascii=False, indent=1), encoding="utf-8")
 
     # 2) 블로그 초안: blog_regions 의 이번 주말 행사, 지역별 상위 N개 고르게
     max_n = cfg.get("max_events_in_post", 10)

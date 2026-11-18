@@ -48,9 +48,30 @@
   .sample{background:#FFF3B0;color:#7a6200;text-align:center;font-size:13px;padding:8px}
   footer{text-align:center;padding:20px 16px 40px;font-size:12.5px;color:var(--sub);line-height:1.7}
   footer a.blog{display:inline-block;margin-top:10px;background:#FFF0F3;color:var(--pink);font-family:Jua,sans-serif;font-size:17px;text-decoration:none;padding:12px 18px;border-radius:14px}
+  .lock{position:fixed;inset:0;z-index:20;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px}
+  .lock[hidden]{display:none}
+  .lock .box{background:#fff;border-radius:24px;padding:28px 22px;max-width:360px;width:100%;text-align:center;box-shadow:0 3px 0 var(--line)}
+  .lock .emo{font-size:52px}
+  .lock h2{font-family:Jua,sans-serif;font-weight:400;font-size:24px;margin:8px 0 6px;color:var(--pink)}
+  .lock p{word-break:keep-all;font-size:14px;color:var(--sub);line-height:1.6;margin:0 0 16px}
+  .lock input{width:100%;font-size:18px;text-align:center;border:2px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px}
+  .lock button{width:100%;border:0;border-radius:14px;padding:14px;font-family:Jua,sans-serif;font-size:18px;background:var(--pink);color:#fff}
+  .lock .err{color:#E0603A;font-size:13px;min-height:18px;margin-top:8px}
+  .lock a{display:block;margin-top:14px;color:#6C63FF;font-size:14px}
 </style>
 </head>
 <body>
+<div class="lock" id="lock" hidden>
+  <div class="box">
+    <div class="emo">🔒🎈</div>
+    <h2>아이랑 행사 모아보기</h2>
+    <p>블로그 <b>아이랑 오늘 뭐하지?</b> 이웃님 전용 페이지예요.<br>비밀번호는 블로그 글에 댓글 남겨주시면<br>비밀댓글로 보내드려요 💌</p>
+    <input type="password" id="pw" placeholder="비밀번호" autocomplete="current-password" enterkeyhint="go">
+    <button id="pwBtn">열기</button>
+    <div class="err" id="pwErr"></div>
+    <a id="lockBlog" href="https://blog.naver.com/todaywithkids">블로그로 가서 비밀번호 받기 →</a>
+  </div>
+</div>
 <div id="sample" class="sample" hidden>지금은 샘플 데이터예요.</div>
 <header>
   <h1 id="h1"></h1>
@@ -150,13 +171,40 @@ function render(){
 $("more").onclick=()=>{st.shown+=PAGE;render()};
 let qt;$("q").oninput=()=>{clearTimeout(qt);qt=setTimeout(()=>{st.q=$("q").value;refresh()},200)};
 
-fetch("data.json?"+Date.now()).then(r=>r.json()).then(j=>{
+function start(j){
   DATA=j;title(j.site?.title||"이번 주말 아이랑 어디 갈까?");
   $("upd").textContent=`업데이트 ${j.updated} · 매주 목요일 자동 갱신`;
   if(j.sample)$("sample").hidden=false;
-  if(j.site?.blog_url)$("blog").href=j.site.blog_url;
+  if(j.site?.blog_url){$("blog").href=j.site.blog_url}
   setupRegion();setupPeriod();setupChips();render();
-}).catch(()=>{$("upd").textContent="데이터를 불러오지 못했어요"});
+}
+const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+async function decrypt(enc,pw){
+  const base=await crypto.subtle.importKey("raw",new TextEncoder().encode(pw),"PBKDF2",false,["deriveKey"]);
+  const key=await crypto.subtle.deriveKey({name:"PBKDF2",salt:b64(enc.salt),iterations:enc.iter,hash:"SHA-256"},base,{name:"AES-GCM",length:256},false,["decrypt"]);
+  const pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:b64(enc.iv)},key,b64(enc.ct));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+async function unlock(enc,pw,quiet){
+  $("pwBtn").textContent="여는 중…";
+  try{const j=await decrypt(enc,pw);store.set("kw_pw",pw);$("lock").hidden=true;start(j)}
+  catch(e){$("lock").hidden=false;if(!quiet)$("pwErr").textContent="비밀번호가 맞지 않아요. 최신 비밀번호를 확인해 주세요!"}
+  $("pwBtn").textContent="열기";
+}
+(async()=>{
+  const r=await fetch("data.enc.json?"+Date.now());
+  if(r.ok){
+    const enc=await r.json();$("upd").textContent="";
+    $("pwBtn").onclick=()=>unlock(enc,$("pw").value.trim());
+    $("pw").onkeydown=e=>{if(e.key==="Enter")unlock(enc,$("pw").value.trim())};
+    const saved=store.get("kw_pw");
+    if(saved)await unlock(enc,saved,true);else $("lock").hidden=false;
+    return;
+  }
+  const p=await fetch("data.json?"+Date.now());   // 샘플 모드
+  if(!p.ok)throw 0;
+  start(await p.json());
+})().catch(()=>{$("upd").textContent="데이터를 불러오지 못했어요"});
 </script>
 </body>
 </html>
