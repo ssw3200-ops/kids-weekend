@@ -1,0 +1,14 @@
+{
+ "updated": "2026-11-18 23:00",
+ "status": {
+  "tour": "430건",
+  "kopis": "200건",
+  "culture": "611건 (페이지키 PageNo, 원본 611/611건, 응답 '정상입니다.')",
+  "std_event": "133건 (원본 10562/10562건, 응답 00 NORMAL SERVICE.)",
+  "std_festival": "23건 (원본 1372/1372건, 응답 00 NORMAL SERVICE.)",
+  "manual": "0건",
+  "dropped": "{'tour': '기간밖 378, 아이행사아님 0', 'kopis': '기간밖 0, 아이행사아님 0', 'culture': '기간밖 0, 아이행사아님 417', 'std_event': '기간밖 0, 아이행사아님 81', 'std_festival': '기간밖 0, 아이행사아님 1'}",
+  "final_by_source": "{'tour': 51, 'kopis': 187, 'culture': 183, 'std_event': 47, 'std_festival': 20}"
+ },
+ "count": 488
+}
