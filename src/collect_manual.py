@@ -6,7 +6,7 @@ from pathlib import Path
 
 import yaml
 
-from common import Event
+from common import Event, sido_of
 
 
 def _d(v) -> date:
@@ -22,7 +22,7 @@ def collect(path: Path) -> list[Event]:
         events.append(Event(
             source="manual",
             title=str(r["title"]),
-            region=str(r["region"]),
+            region=sido_of(str(r["region"])) or str(r["region"]),
             start=_d(r["start"]),
             end=_d(r.get("end", r["start"])),
             place=str(r.get("place", "")),

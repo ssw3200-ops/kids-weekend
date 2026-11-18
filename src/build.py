@@ -12,7 +12,7 @@ import os
 import shutil
 import sys
 import zipfile
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import yaml
@@ -25,7 +25,8 @@ import collect_manual  # noqa: E402
 import collect_tour  # noqa: E402
 import draft  # noqa: E402
 import images  # noqa: E402
-from common import KST, Event, overlaps, parse_ymd, today_kst, upcoming_weekend  # noqa: E402
+from common import (CATEGORIES, KST, SIDO, Event, category_of, overlaps, parse_ymd,  # noqa: E402
+                    today_kst, upcoming_weekend)
 
 ROOT = Path(__file__).resolve().parent.parent
 DOCS = ROOT / "docs"
@@ -80,9 +81,12 @@ def main() -> None:
     args = ap.parse_args()
 
     cfg = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
-    regions = cfg["regions"]
-    wk_start, wk_end = upcoming_weekend(today_kst(), cfg["weekend"].get("include_friday", True))
-    print(f"대상 주말: {wk_start} ~ {wk_end}")
+    blog_regions: list[str] = cfg.get("blog_regions", ["세종", "대전"])
+    today = today_kst()
+    wk_start, wk_end = upcoming_weekend(today, cfg["weekend"].get("include_friday", True))
+    nx_start, nx_end = wk_start + timedelta(days=7), wk_end + timedelta(days=7)
+    win_start, win_end = min(today, wk_start), nx_end  # 페이지: 오늘 ~ 다음 주말
+    print(f"이번 주말 {wk_start}~{wk_end} / 다음 주말 {nx_start}~{nx_end}")
 
     status: dict[str, str] = {}
     events: list[Event] = []
@@ -101,10 +105,10 @@ def main() -> None:
                 status[name] = "키 없음 (건너뜀)"
                 continue
             try:  # 한 소스가 죽어도 나머지는 계속
-                got = fn(key, regions, wk_start, wk_end)
+                got = fn(key, win_start, win_end)
                 events += got
                 status[name] = f"{len(got)}건"
-                if name == "culture" and not got:
+                if name == "culture" and collect_culture.DEBUG:
                     status[name] += f" ({collect_culture.DEBUG})"
             except Exception as e:  # noqa: BLE001
                 status[name] = f"실패: {e}"[:200]
@@ -117,43 +121,49 @@ def main() -> None:
     kw = cfg["keywords"]
     picked = []
     for e in events:
-        if not overlaps(e, wk_start, wk_end):
+        if not overlaps(e, win_start, win_end):
             continue
         e.score = score(e, kw, wk_end)
-        if e.score >= 0:
-            picked.append(e)
+        if e.score < 0:
+            continue
+        e.category = category_of(e.genre, e.title, e.source)
+        picked.append(e)
     picked = dedup(picked)
-    reg_order = {r["name"]: i for i, r in enumerate(regions)}
-    picked.sort(key=lambda e: (reg_order.get(e.region, 99), -e.score, e.end))
-    print(f"주말 행사: {len(picked)}건")
+    picked.sort(key=lambda e: (-e.score, e.end))
+    print(f"기간 내 행사: {len(picked)}건")
 
-    # 1) 공개 페이지 데이터
+    # 1) 공개 페이지 데이터 (전국)
     DOCS.mkdir(exist_ok=True)
     now = datetime.now(KST).strftime("%Y-%m-%d %H:%M")
+    present = {e.region for e in picked}
     page = {
         "updated": now,
         "site": cfg.get("site", {}),
+        "today": today.isoformat(),
         "weekend": [wk_start.isoformat(), wk_end.isoformat()],
-        "regions": [r["name"] for r in regions],
+        "next_weekend": [nx_start.isoformat(), nx_end.isoformat()],
+        "regions": [r for r in SIDO if r in present],
+        "categories": [c for c in CATEGORIES if any(e.category == c for e in picked)],
         "status": status,
         "sample": args.sample,
         "events": [e.to_dict() for e in picked],
     }
-    (DOCS / "data.json").write_text(json.dumps(page, ensure_ascii=False, indent=1), encoding="utf-8")
+    (DOCS / "data.json").write_text(json.dumps(page, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 
-    # 2) 블로그 초안: 지역별 상위 N개 고르게
+    # 2) 블로그 초안: blog_regions 의 이번 주말 행사, 지역별 상위 N개 고르게
     max_n = cfg.get("max_events_in_post", 10)
-    per = max(1, max_n // len(regions))
+    per = max(1, max_n // len(blog_regions))
     post_events = []
-    for r in regions:
-        post_events += [e for e in picked if e.region == r["name"] and e.score >= 3][:per]
+    for r in blog_regions:
+        post_events += [e for e in picked if e.region == r and e.score >= 3
+                        and overlaps(e, wk_start, wk_end)][:per]
     if not post_events:
         print("[안내] 글에 넣을 행사가 없어 초안은 만들지 않습니다.")
         return
 
     page_url = os.environ.get("PAGE_URL", "")
     seed = wk_start.isoformat()
-    d = draft.build(post_events, [r["name"] for r in regions], wk_start, wk_end, seed, page_url)
+    d = draft.build(post_events, blog_regions, wk_start, wk_end, seed, page_url)
 
     out = DOCS / "drafts" / wk_start.isoformat()
     if out.exists():
