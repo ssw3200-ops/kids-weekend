@@ -53,8 +53,8 @@ def collect(name: str, key: str, start: date, end: date) -> list[Event]:
         resp = payload.get("response") or {}
         header = resp.get("header") or {}
         hmsg = hmsg or f"{header.get('resultCode')} {header.get('resultMsg')}"
-        if not resp:
-            hmsg = hmsg or str(payload)[:120]
+        if page == 1 and not (resp.get("body") or {}).get("items"):
+            hmsg = str(payload)[:200]
         if str(header.get("resultCode", "00")) not in ("00", "0"):
             if header.get("resultCode") == "03":  # NODATA
                 break
