@@ -50,10 +50,10 @@ def collect(name: str, key: str, start: date, end: date) -> list[Event]:
     while page <= 60:
         params = {"serviceKey": key, "pageNo": page, "numOfRows": 1000, "type": "json"}
         payload = http_get(BASE + spec["path"], params, timeout=40).json()
-        resp = payload.get("response") or {}
+        resp = payload.get("response") or payload  # 표준데이터는 response 껍데기 없이 옴
         header = resp.get("header") or {}
         hmsg = hmsg or f"{header.get('resultCode')} {header.get('resultMsg')}"
-        if page == 1 and not (resp.get("body") or {}).get("items"):
+        if page == 1 and not (resp.get("body") or {}).get("items") and "body" not in resp:
             hmsg = str(payload)[:200]
         if str(header.get("resultCode", "00")) not in ("00", "0"):
             if header.get("resultCode") == "03":  # NODATA
