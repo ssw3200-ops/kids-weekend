@@ -104,6 +104,8 @@ def main() -> None:
                 got = fn(key, regions, wk_start, wk_end)
                 events += got
                 status[name] = f"{len(got)}건"
+                if name == "culture" and not got:
+                    status[name] += f" ({collect_culture.DEBUG})"
             except Exception as e:  # noqa: BLE001
                 status[name] = f"실패: {e}"[:200]
                 print(f"[경고] {name} 실패: {e}")

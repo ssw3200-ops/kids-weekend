@@ -3,6 +3,12 @@ name: 주말 행사 자동 수집
 on:
   schedule:
     - cron: "7 12 * * 4"   # 매주 목요일 21:07 (한국시간)
+  push:                     # 코드·설정·직접입력 행사 파일을 고치면 바로 다시 실행
+    branches: [main]
+    paths:
+      - "src/**"
+      - "config.yaml"
+      - "manual_events.yaml"
   workflow_dispatch:        # 휴대폰에서 Actions 탭 → Run workflow 로 수동 실행
     inputs:
       sample:

@@ -22,8 +22,13 @@ FIELD = {
 }
 
 
+DEBUG = ""  # build.py가 상태에 같이 기록 (0건일 때 원인 파악용)
+
+
 def collect(key: str, regions: list[dict], start: date, end: date) -> list[Event]:
+    global DEBUG
     events: list[Event] = []
+    raw, areas, msg = 0, [], ""
     page = 1
     while page <= 30:
         params = {
@@ -33,11 +38,18 @@ def collect(key: str, regions: list[dict], start: date, end: date) -> list[Event
             "cPage": page,
             "rows": 100,
         }
-        root = ET.fromstring(http_get(URL, params).content)
+        content = http_get(URL, params).content
+        root = ET.fromstring(content)
         rows = root.findall(".//item")
+        msg = msg or (root.findtext(".//resultMsg") or root.findtext(".//returnAuthMsg") or "")
+        if page == 1 and not rows:
+            msg = msg or content[:150].decode("utf-8", "ignore")
+        raw += len(rows)
         for it in rows:
             get = lambda k: (it.findtext(FIELD[k]) or "").strip()  # noqa: E731
             area_text = f"{get('area')} {get('sigungu')} {get('place')}"
+            if len(areas) < 5:
+                areas.append(area_text.strip()[:20] or "(빈값)")
             reg = next((r for r in regions if r["culture"] in area_text), None)
             if not reg:
                 continue
@@ -59,4 +71,5 @@ def collect(key: str, regions: list[dict], start: date, end: date) -> list[Event
         if len(rows) < 100:
             break
         page += 1
+    DEBUG = f"원본 {raw}건, 응답 '{msg[:60]}', 지역값 예: {areas}"
     return events
