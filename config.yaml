@@ -1,0 +1,66 @@
+# 이번 주말 아이랑 행사 — 설정 파일
+# 지역을 늘리고 싶으면 regions에 한 줄 추가하면 됩니다.
+
+site:
+  title: "이번 주말 아이랑 어디 갈까?"
+  blog_name: "아이랑 오늘 뭐하지?"
+  blog_url: "https://blog.naver.com/"   # ← 본인 블로그 주소로 바꿔 주세요
+
+regions:
+  # name: 화면 표시용 / tour_ldong: 관광공사 법정동 시도코드 / kopis: KOPIS 시도코드 / culture: 문화정보 sido 표기
+  - name: 세종
+    tour_ldong: "36"
+    kopis: "36"
+    culture: "세종"
+  - name: 대전
+    tour_ldong: "30"
+    kopis: "30"
+    culture: "대전"
+
+# 주말 계산: 실행일 기준 다가오는 토·일 (금요일 저녁 행사도 포함하려면 include_friday: true)
+weekend:
+  include_friday: true
+
+# 아이 행사 점수 (높을수록 위에 노출)
+keywords:
+  strong:   # +3점
+    - 어린이
+    - 키즈
+    - 아동
+    - 유아
+    - 가족
+    - 인형극
+    - 동화
+    - 체험
+    - 그림책
+    - 뮤지컬
+    - 공룡
+    - 과학
+    - 놀이
+    - 산타
+    - 크리스마스
+  weak:     # +1점
+    - 축제
+    - 전시
+    - 박물관
+    - 미술관
+    - 공원
+    - 빛
+    - 마술
+    - 서커스
+    - 페스티벌
+  exclude:  # 들어가면 제외
+    - 성인
+    - 19세
+    - 청소년관람불가
+    - 와인
+    - 맥주
+    - 주류
+    - 취업
+    - 채용
+    - 세미나
+    - 포럼
+    - 학술
+
+# 블로그 글에 넣을 최대 행사 수
+max_events_in_post: 10

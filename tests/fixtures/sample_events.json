@@ -1,0 +1,10 @@
+[
+ {"source": "kopis", "title": "(샘플) 어린이 뮤지컬 공룡 친구들", "region": "세종", "start": "20261114", "end": "20261122", "place": "세종문화예술회관", "price": "전석 15,000원", "genre": "뮤지컬", "age": "24개월 이상", "kid_flag": true, "link": "https://www.kopis.or.kr"},
+ {"source": "culture", "title": "(샘플) 그림책 원화 전시 - 겨울 숲 이야기", "region": "세종", "start": "20261101", "end": "20261231", "place": "세종시립도서관", "price": "무료", "genre": "전시", "link": "https://www.culture.go.kr"},
+ {"source": "tour", "title": "(샘플) 세종 호수공원 빛 축제", "region": "세종", "start": "20261121", "end": "20261122", "place": "세종호수공원", "price": "무료", "genre": "축제·행사", "link": "https://search.naver.com"},
+ {"source": "manual", "title": "(샘플) 크리스마스 만들기 체험 교실", "region": "세종", "start": "20261122", "end": "20261122", "place": "세종 어린이 문화센터", "price": "5,000원", "genre": "체험", "age": "5~9세", "kid_flag": true, "tags": ["사전예약 필수"]},
+ {"source": "kopis", "title": "(샘플) 인형극 아기 돼지 삼형제", "region": "대전", "start": "20261120", "end": "20261123", "place": "대전예술의전당 앙상블홀", "price": "R석 20,000원", "genre": "연극", "age": "36개월 이상", "kid_flag": true, "link": "https://www.kopis.or.kr"},
+ {"source": "manual", "title": "(샘플) 과학관 주말 공룡 탐험 체험", "region": "대전", "start": "20261101", "end": "20261130", "place": "대전 과학관", "price": "무료", "genre": "체험", "age": "초등", "kid_flag": true, "tags": ["온라인 예약"]},
+ {"source": "tour", "title": "(샘플) 대전 원도심 가족 겨울 페스티벌", "region": "대전", "start": "20261120", "end": "20261122", "place": "대전 중구 일원", "price": "무료", "genre": "축제·행사", "link": "https://search.naver.com"},
+ {"source": "culture", "title": "(샘플) 성인 와인 클래스", "region": "대전", "start": "20261121", "end": "20261121", "place": "대전", "price": "50,000원", "genre": "교육"}
+]
