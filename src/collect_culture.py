@@ -28,7 +28,7 @@ DEBUG = ""  # build.py가 상태에 같이 기록 (0건일 때 원인 파악용)
 def collect(key: str, start: date, end: date) -> list[Event]:
     global DEBUG
     events: list[Event] = []
-    raw, areas, msg = 0, [], ""
+    raw, areas, msg, samples = 0, [], "", []
     page = 1
     total = None
     while page <= 100:  # 페이지 크기가 10으로 고정돼도 최대 1,000건까지 (하루 한도 1만 건 내)
@@ -57,6 +57,8 @@ def collect(key: str, start: date, end: date) -> list[Event]:
                     areas.append(f"{get('area')} {get('place')}".strip()[:20] or "(빈값)")
                 continue
             s, e = parse_ymd(get("start")), parse_ymd(get("end"))
+            if len(samples) < 3:
+                samples.append(f"{get('title')[:12]}|{get('start')}~{get('end')}|{get('genre')}")
             if not s or not e:
                 continue
             title = get("title")
@@ -74,5 +76,5 @@ def collect(key: str, start: date, end: date) -> list[Event]:
         if not rows or raw >= (total or 0):
             break
         page += 1
-    DEBUG = f"원본 {raw}/{total}건, 응답 '{msg[:60]}', 지역 못 찾은 예: {areas}"
+    DEBUG = f"원본 {raw}/{total}건, 응답 '{msg[:60]}', 지역 못 찾은 예: {areas}, 샘플: {samples}"
     return events

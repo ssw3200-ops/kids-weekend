@@ -120,15 +120,21 @@ def main() -> None:
 
     kw = cfg["keywords"]
     picked = []
+    drop: dict[str, list[int]] = {}  # 소스별 [기간밖, 제외어]
     for e in events:
+        c = drop.setdefault(e.source, [0, 0])
         if not overlaps(e, win_start, win_end):
+            c[0] += 1
             continue
         e.score = score(e, kw, wk_end)
         if e.score < 0:
+            c[1] += 1
             continue
         e.category = category_of(e.genre, e.title, e.source)
         picked.append(e)
+    status["dropped"] = str({k: f"기간밖 {v[0]}, 제외어 {v[1]}" for k, v in drop.items()})
     picked = dedup(picked)
+    status["final_by_source"] = str({s_: sum(1 for e in picked if e.source == s_) for s_ in drop})
     picked.sort(key=lambda e: (-e.score, e.end))
     print(f"기간 내 행사: {len(picked)}건")
 
