@@ -185,7 +185,7 @@ let qt;$("q").oninput=()=>{clearTimeout(qt);qt=setTimeout(()=>{st.q=$("q").value
 
 function start(j){
   DATA=j;title(j.site?.title||"이번 주말 아이랑 어디 갈까?");
-  $("upd").textContent=`업데이트 ${j.updated} · 매주 목요일 자동 갱신`;
+  $("upd").textContent=`업데이트 ${j.updated} · 매일 아침 자동 갱신`;
   if(j.sample)$("sample").hidden=false;
   if(j.site?.blog_url){$("blog").href=j.site.blog_url}
   setupRegion();setupPeriod();setupChips();render();

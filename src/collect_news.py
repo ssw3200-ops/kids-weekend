@@ -296,7 +296,9 @@ def event_place(text: str) -> str:
             continue
         take: list[str] = []
         for tok in reversed(text[max(0, m.start() - 50):m.start()].split()):
-            if re.search(r"\d|부터|까지|오전|오후", tok) or (take and re.search(r"(은|는|을|를|와|과|도|며|고|해|서|에)$", tok)):
+            if re.search(r"\d|부터|까지|오전|오후|개최|열려|밝혀|기자|뉴스|일보|신문|이코노미|타임즈|저널|미디어|투데이", tok) \
+                    or re.search(r"(동안|간)$", tok) \
+                    or (take and re.search(r"(은|는|을|를|와|과|도|며|고|해|서|에)$", tok)):
                 break
             take.insert(0, tok.strip("'\"‘’“”,·"))
             if len(take) >= 4:
