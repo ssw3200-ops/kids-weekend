@@ -47,6 +47,7 @@ EVENT_WORDS = ("축제", "행사", "페스티벌", "한마당", "잔치", "마�
                "박람회", "놀이터", "캠프", "음악회", "콘서트", "전시", "대회")
 
 DEBUG: dict = {}
+VERSION = 2  # 추출 규칙을 바꾸면 올리기 → 예전 캐시 결과는 다시 추출
 
 
 
@@ -382,7 +383,7 @@ def collect(start: date, end: date, regions: list[str] | None = None) -> list[Ev
 
     # 3) 원문 읽어서 추출 (캐시 활용)
     cands.sort(key=lambda it: (not re.search(r"['‘\"“「<]", it["title"]), -it["pubd"].toordinal()))
-    need = [it for it in cands if it["link"] not in cache][:250]
+    need = [it for it in cands if (cache.get(it["link"]) or {}).get("v") != VERSION][:250]
 
     def extract(it):
         real = it["link"]
@@ -392,7 +393,7 @@ def collect(start: date, end: date, regions: list[str] | None = None) -> list[Ev
         name = event_name(it["title"], text)
         ds = event_dates(it["title"] + " " + text, it["pubd"]) if name else None
         return it["link"], {
-            "url": real, "region": detect_region(it["title"], text),
+            "v": VERSION, "url": real, "region": detect_region(it["title"], text),
             "name": name, "kid": kid_ok(it["title"], text),
             "start": ds[0].isoformat() if ds else "", "end": ds[1].isoformat() if ds else "",
             "time": event_time(text), "place": event_place(text),
