@@ -31,6 +31,8 @@ class Event:
     score: int = 0
     city: str = ""         # 시·군·구 (주소에서 추출, 없으면 빈값)
     category: str = ""     # 화면 분야 (분류는 category_of)
+    articles: list[dict] = field(default_factory=list)  # 기사 수집: [{title, url, source, date}]
+    official: str = ""     # 기사에서 찾은 공식 페이지
 
     @property
     def key(self) -> str:
@@ -49,6 +51,11 @@ class Event:
         d["start"] = self.start.isoformat()
         d["end"] = self.end.isoformat()
         d["is_free"] = self.is_free
+        d["news"] = self.source == "news"
+        if not self.articles:
+            d.pop("articles")
+        if not self.official:
+            d.pop("official")
         for k in ("source", "kid_flag", "score", "genre"):  # 화면에 안 쓰는 값은 빼서 용량 절약
             d.pop(k, None)
         return d
@@ -156,6 +163,6 @@ def category_of(genre: str, title: str, source: str) -> str:
         return "전시"
     if any(k in g + t for k in ("체험", "교육", "만들기", "클래스", "캠프", "워크숍")):
         return "체험·교육"
-    if source in ("tour", "std_festival") or "축제" in g + t or "행사" in g:
+    if source in ("tour", "std_festival", "news") or "축제" in g + t or "행사" in g:
         return "축제·행사"
     return "기타"

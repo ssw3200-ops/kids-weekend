@@ -22,6 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import collect_culture  # noqa: E402
 import collect_kopis  # noqa: E402
 import collect_manual  # noqa: E402
+import collect_news  # noqa: E402
 import collect_std  # noqa: E402
 import collect_tour  # noqa: E402
 import draft  # noqa: E402
@@ -119,6 +120,14 @@ def main() -> None:
             except Exception as e:  # noqa: BLE001
                 status[name] = f"실패: {e}"[:200]
                 print(f"[경고] {name} 실패: {e}")
+        # 기사 기반 지역 행사 (키 없음)
+        try:
+            got = collect_news.collect(win_start, win_end)
+            events += got
+            status["news"] = f"{len(got)}건 ({json.dumps(collect_news.DEBUG, ensure_ascii=False)})"
+        except Exception as e:  # noqa: BLE001
+            status["news"] = f"실패: {e}"[:200]
+            print(f"[경고] news 실패: {e}")
     manual = collect_manual.collect(ROOT / "manual_events.yaml")
     events += manual
     status["manual"] = f"{len(manual)}건"
@@ -134,7 +143,7 @@ def main() -> None:
             continue
         e.score = score(e, kw, wk_end)
         # 아이 행사로 볼 근거가 있어야 페이지에 노출 (축제는 가족 단위가 많아 기본 포함)
-        if e.score < 0 or (e.score < 3 and e.source not in ("tour", "std_festival")):
+        if e.score < 0 or (e.score < 3 and e.source not in ("tour", "std_festival", "news")):
             c[1] += 1
             continue
         e.category = category_of(e.genre, e.title, e.source)
