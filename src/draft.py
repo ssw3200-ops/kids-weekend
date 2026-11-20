@@ -58,6 +58,7 @@ KINDS = [
     ("시즌 행사", "🎄", lambda e: any(w in e.title for w in SEASON_WORDS)),
     ("과학관", "🔬", lambda e: "과학관" in _txt(e) or "과학" in e.genre),
     ("도서관", "📚", lambda e: "도서관" in _txt(e)),
+    ("박물관", "🏛️", lambda e: "박물관" in _txt(e) and e.category != "전시"),
     ("체험", "🎨", lambda e: e.category == "체험·교육" or e.source == "org" and "체험" in e.genre),
     ("전시", "🖼️", lambda e: e.category == "전시"),
     ("축제·행사", "🎉", lambda e: e.category in ("축제·행사", "기타") and e.category not in SHOW_CATS),
@@ -107,9 +108,10 @@ def event_block(i: int, ev: Event) -> str:
     days = next((t for t in ev.tags if t.startswith("운영요일")), "")
     if days:
         lines.append(f"🗓️ {days} (날짜 안에서 이 요일만)")
-    if ev.source == "org" and any(t in ev.tags for t in ("접수중", "접수대기")):
+    if ev.source == "org" and any(t in ("접수중", "접수대기") or "신청" in t or "예약" in t for t in ev.tags):
         lines.append("📝 사전 예약 필요 — 링크에서 신청")
     point = [t for t in ev.tags if t not in ("무료", "접수중", "접수대기", "기사") and not t.startswith("운영요일")
+             and "신청" not in t
              and t not in (ev.place,)]
     point = [t for t in point if len(t) <= 12]
     if ev.is_free:

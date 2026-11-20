@@ -68,19 +68,12 @@ sources:
 
   - name: 국립어린이박물관 교육
     region: 세종
-    type: links
-    url: https://child.nmcik.or.kr/
-    link_pattern: "."
-    place: 국립어린이박물관
-    address: 세종특별자치시 어울누리로 130
-    genre: 박물관 체험
-    kid: true
-
-  - name: 국립어린이박물관 현재교육
-    region: 세종
-    type: links
-    url: https://child.nmcik.or.kr/edu/current/all
-    link_pattern: "."
+    type: json          # 화면이 이 주소에서 목록(JSON)을 받아 그림
+    url: https://child.nmcik.or.kr/education/current/all/list
+    data: {size: 60, page: 0, search: "", prefix: title}
+    list: data.content
+    fields: {title: title, period: date, who: type, how: reserveType}
+    link: https://child.nmcik.or.kr/edu/current/all
     place: 국립어린이박물관
     address: 세종특별자치시 어울누리로 130
     genre: 박물관 체험
@@ -88,23 +81,27 @@ sources:
 
   - name: 국립어린이박물관 전시
     region: 세종
-    type: links
-    url: https://child.nmcik.or.kr/exhibitions/current/all
-    link_pattern: "."
+    type: json
+    url: https://child.nmcik.or.kr/exhibitions/current/entire/list
+    data: {size: 30, page: 0, search: "", prefix: title}
+    list: data.content
+    fields: {title: title, period: date}
+    link: https://child.nmcik.or.kr/exhibitions/current/all
     place: 국립어린이박물관
     address: 세종특별자치시 어울누리로 130
     genre: 전시
     kid: true
 
-  - name: 세종시문화관광재단 이달의 문화행사
+  - name: 세종시문화관광재단 문화행사
     region: 세종
     type: links
-    url: https://www.sjcf.or.kr/index.do
+    url: https://www.sjcf.or.kr/clturEvent/list.do?key=2111060073
     link_pattern: clturEvent/view
     genre: 공연 행사
     kid: false        # 어른 공연이 많아서 아이 키워드가 있어야 통과
 
   - name: 세종시청 알림
+    enabled: false    # 2026-11-20 브라우저가 아니면 로그인(SSO) 화면으로 돌려보냄 → 자동 수집 불가
     region: 세종
     type: links
     url: https://www.sejong.go.kr/index.jsp

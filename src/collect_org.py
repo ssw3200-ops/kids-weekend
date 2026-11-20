@@ -175,7 +175,7 @@ def _mk_event(src: dict, title: str, period: tuple[date, date], place: str = "",
     addr = src.get("address", "")
     ev = Event(source="org", title=title, region=src["region"], start=period[0], end=period[1],
                place=place or src.get("place", ""), address=addr, price=price,
-               link=link or src["url"], genre=f"{src.get('genre', '')} {extra}".strip(),
+               link=link or src.get("link") or src["url"], genre=f"{src.get('genre', '')} {extra}".strip(),
                kid_flag=bool(src.get("kid")), tags=[src["name"]])
     ev.city = city_of(addr)
     return ev
@@ -308,7 +308,50 @@ def parse_rss(doc: str, src: dict, base: date) -> list[Event]:
     return out
 
 
-PARSERS = {"links": parse_links, "table": parse_table, "items": parse_items, "rss": parse_rss}
+def _dig(obj, path: str):
+    for k in [x for x in path.split(".") if x]:
+        if isinstance(obj, dict):
+            obj = obj.get(k)
+        elif isinstance(obj, list) and k.isdigit():
+            obj = obj[int(k)] if int(k) < len(obj) else None
+        else:
+            return None
+    return obj
+
+
+def parse_json(doc: str, src: dict, base: date) -> list[Event]:
+    """화면이 자바스크립트로 불러오는 JSON 목록 (국립어린이박물관 교육·전시)"""
+    import json as _json
+    data = _json.loads(doc)
+    rows = _dig(data, src.get("list", "")) or []
+    f = src.get("fields", {})
+    out = []
+    if rows and isinstance(rows[0], dict):
+        DEBUG[f"{src['name']} 항목"] = ",".join(list(rows[0].keys())[:15])
+    for r in rows:
+        if not isinstance(r, dict):
+            continue
+        title = _clean(str(r.get(f.get("title", "title")) or ""))
+        per_txt = str(r.get(f.get("period", "date")) or "")
+        if not per_txt:  # 날짜 칸 이름을 모르면 날짜처럼 생긴 값을 찾음
+            per_txt = " ".join(str(v) for v in r.values() if isinstance(v, str) and re.search(r"20\d{2}[.-]", v))
+        period = find_period(per_txt, base)
+        if not title or not period:
+            continue
+        who = _clean(str(r.get(f.get("who", "type")) or ""))
+        if who in ("단체", "성인", "청소년"):
+            continue
+        ev = _mk_event(src, title, period, price=_clean(str(r.get(f.get("price", "")) or "")) if f.get("price") else "")
+        if who:
+            ev.age = f"{who} 대상"
+        how = _clean(str(r.get(f.get("how", "reserveType")) or ""))
+        if how:
+            ev.tags.append(how)
+        out.append(ev)
+    return out
+
+
+PARSERS = {"links": parse_links, "table": parse_table, "items": parse_items, "rss": parse_rss, "json": parse_json}
 
 
 PAGE_FIELDS = ["pageIndex", "currentPageNo", "pageNo", "page", "cpage", "curPage", "nowPage"]
@@ -352,6 +395,10 @@ def fetch_pages(src: dict) -> list[str]:
                 time.sleep(2 * (i + 1))
         raise RuntimeError(f"접속 실패: {type(last).__name__}")
 
+    if src.get("type") == "json":  # POST 로 목록 JSON 받기
+        if src.get("method", "post") == "post":
+            return [get(src["url"], {k: str(v) for k, v in (src.get("data") or {}).items()})]
+        return [get(src["url"])]
     first = get(src["url"])
     docs = [first]
     pages = int(src.get("pages", 1))
@@ -397,6 +444,10 @@ def collect(start: date, end: date, path: Path | None = None) -> list[Event]:
     common = cfg.get("common_skip", [])
     base = today_kst()
     out: list[Event] = []
+    dbg = ROOT / "docs" / "cache" / "org_debug"
+    if dbg.exists():  # 지난 실행 진단 파일 정리
+        for f in dbg.glob("*.html"):
+            f.unlink()
     for src in cfg.get("sources", []):
         if src.get("enabled", True) is False:
             continue
