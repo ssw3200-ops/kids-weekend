@@ -60,3 +60,5 @@ max_events_in_post: 12
 max_shows_in_post: 3
 # 한 지역 안에서 같은 묶음(과학관·체험·전시…)은 최대 몇 개 — 한 기관이 글을 다 차지하지 않게
 max_per_kind_in_region: 3
+# 시즌 행사(크리스마스·눈썰매·빛축제 등)는 위 개수와 별도로 지역당 최대 몇 개 더 넣음
+max_season_extra: 3

@@ -208,6 +208,7 @@ def main() -> None:
     max_n = cfg.get("max_events_in_post", 12)
     max_show = cfg.get("max_shows_in_post", 3)
     max_kind = cfg.get("max_per_kind_in_region", 3)  # 한 지역에서 같은 묶음(과학관 등)은 최대 몇 개
+    max_season = cfg.get("max_season_extra", 3)  # 시즌 행사는 제한 밖으로 지역당 최대 몇 개 더
     per = max(1, max_n // len(blog_regions))
     post_events, shows = [], 0
     for r in blog_regions:
@@ -215,6 +216,10 @@ def main() -> None:
                  and weekend_open(e)]
         # 체험·시즌·전시·축제 먼저, 같은 묶음 안에서는 점수순
         cands.sort(key=lambda e: (draft.is_show(e), -e.score, e.end))
+        # 🎄 시즌 행사(크리스마스·눈썰매 등)는 지역별 개수 제한과 상관없이 먼저 넣음
+        season = [e for e in cands if draft.kind_of(e)[0] == "시즌 행사"][:max_season]
+        post_events += season
+        cands = [e for e in cands if e not in season]
         took, kinds = 0, {}
         for e in cands:
             if took >= per:
