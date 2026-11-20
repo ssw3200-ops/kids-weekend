@@ -37,6 +37,9 @@ REGION_QUERY = {
     "경남": "경남", "제주": "제주",
 }
 KEYWORDS = ["축제 개최", "어린이 행사", "가족 축제", "체험 행사"]
+# 블로그 글 지역(focus)은 검색어를 더 넓게: 시즌·체험·기관 행사까지
+FOCUS_KEYWORDS = ["크리스마스 행사", "어린이 체험", "가족 체험 프로그램", "주말 무료 행사",
+                  "과학관 체험", "도서관 어린이 프로그램", "마켓 개최", "눈썰매장 개장"]
 
 KID_WORDS = ["어린이", "아이", "아동", "유아", "가족", "키즈", "체험", "놀이", "동화", "인형극", "산타",
              "크리스마스", "축제", "페스티벌", "한마당", "공연", "마켓", "장터", "빛"]
@@ -334,8 +337,10 @@ def norm(name: str) -> str:
 
 
 # ── 메인 ──────────────────────────────────────────────────────
-def collect(start: date, end: date, regions: list[str] | None = None) -> list[Event]:
+def collect(start: date, end: date, regions: list[str] | None = None,
+            focus: list[str] | None = None) -> list[Event]:
     regions = regions or list(REGION_QUERY)
+    focus = [r for r in (focus or []) if r in REGION_QUERY]
     cache: dict = {}
     if CACHE.exists():
         try:
@@ -345,6 +350,7 @@ def collect(start: date, end: date, regions: list[str] | None = None) -> list[Ev
 
     # 1) RSS 검색
     jobs = [(reg, f"{REGION_QUERY[reg]} {kw}") for reg in regions for kw in KEYWORDS]
+    jobs += [(reg, f"{REGION_QUERY[reg]} {kw}") for reg in focus for kw in FOCUS_KEYWORDS]
     found: dict[str, dict] = {}
     stat = {"bing": 0, "google": 0}
 

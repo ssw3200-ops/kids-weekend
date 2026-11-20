@@ -1,0 +1,100 @@
+# 기관 홈페이지·예약 페이지에서 아이 행사를 모으는 목록
+# 휴대폰에서 이 파일만 고쳐도 다음 실행부터 반영돼요.
+#
+# type
+#   links : 페이지의 링크 글자 속 날짜로 행사를 찾음 (link_pattern 이 들어간 링크만)
+#   table : 표(시설명·예약명·이용기간…) 한 줄 = 행사 1개
+#   items : 목록 한 칸(li) = 행사 1개 (제목 + "기 간 2026-11-01 ~ 2026-11-15")
+#   rss   : 블로그 RSS (제목·요약 속 날짜가 앞으로 있는 글만)
+#
+# kid: true  → 기관 자체가 아이·가족 대상 (키워드 없어도 통과)
+# skip       → 제목에 들어가면 뺄 말
+# enabled: false 로 끄기
+#
+# ※ 일부 기관(국립세종도서관 등)은 해외 접속을 막아서 GitHub(미국 서버)에서 안 열릴 수 있어요.
+#   status.json 의 org 항목에서 기관별 결과를 확인하세요.
+
+common_skip: [채용, 입찰, 점검, 심사, 결과, 선정, 공개구입, 자원봉사, 강사, 포럼, 토론회, 설명회,
+              단체, 기관예약, 학급, 특수학급, 교사, 시니어, 어르신, 직원, 공무직, 공고]
+
+sources:
+  - name: 국립중앙과학관
+    region: 대전
+    type: links
+    url: https://www.science.go.kr/mps/index.do
+    link_pattern: moveBbsNttDetail.do
+    place: 국립중앙과학관
+    address: 대전광역시 유성구 대덕대로 481
+    genre: 과학 체험
+    kid: true
+
+  - name: 대전 OK예약 체험
+    region: 대전
+    type: table
+    url: https://www.daejeon.go.kr/okr2019/expRsvtList.do?menuSeq=8201
+    pages: 6
+    columns: {place: 시설명, title: 예약명, period: 이용기간, price: 수강료, status: 접수상태}
+    skip_status: [접수종료, 인원마감]
+    genre: 체험
+    kid: true
+
+  - name: 대전 OK예약 강좌·교육
+    region: 대전
+    type: table
+    url: https://www.daejeon.go.kr/okr2019/OkrEduList.do?menuSeq=8100
+    pages: 4
+    columns: {place: 시설명, title: 예약명, period: 이용기간, price: 수강료, status: 접수상태}
+    skip_status: [접수종료, 인원마감]
+    genre: 체험 교육
+    kid: false        # 성인 강좌가 많아서 아이 키워드가 있어야 통과
+
+  - name: 대전시립미술관 어린이·가족
+    region: 대전
+    type: items
+    url: https://www.daejeon.go.kr/dma/DmaEduList.do?category=2&menuSeq=6089
+    place: 대전시립미술관
+    address: 대전광역시 서구 둔산대로 155
+    genre: 미술 체험
+    kid: true
+
+  - name: 대전시립미술관 문화행사
+    region: 대전
+    type: items
+    url: https://www.daejeon.go.kr/dma/DmaEduList.do?category=4&menuSeq=6091
+    place: 대전시립미술관
+    address: 대전광역시 서구 둔산대로 155
+    genre: 행사
+    kid: false
+
+  - name: 세종시청 알림
+    region: 세종
+    type: links
+    url: https://www.sejong.go.kr/index.jsp
+    link_pattern: "shrUrl|bbs/R0071/view"
+    genre: 행사
+    kid: false
+
+  - name: 세종시 공식 블로그
+    region: 세종
+    type: rss
+    url: https://rss.blog.naver.com/sejong_story.xml
+    genre: 행사
+    kid: false
+
+  - name: 국립세종도서관
+    region: 세종
+    type: links
+    url: https://sejong.nl.go.kr/
+    link_pattern: "."
+    place: 국립세종도서관
+    genre: 도서관 프로그램
+    kid: false
+
+  - name: 국립세종수목원
+    region: 세종
+    type: links
+    url: https://www.sjna.or.kr/
+    link_pattern: "."
+    place: 국립세종수목원
+    genre: 체험
+    kid: false

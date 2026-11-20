@@ -9,6 +9,7 @@ on:
       - "src/**"
       - "config.yaml"
       - "manual_events.yaml"
+      - "sources.yaml"
   workflow_dispatch:        # 휴대폰에서 Actions 탭 → Run workflow 로 수동 실행
     inputs:
       sample:

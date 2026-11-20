@@ -54,5 +54,7 @@ keywords:
     - 포럼
     - 학술
 
-# 블로그 글에 넣을 최대 행사 수
-max_events_in_post: 10
+# 블로그 글에 넣을 최대 행사 수 (지역별로 나눠서)
+max_events_in_post: 12
+# 그중 공연(뮤지컬·연극·콘서트 등)은 최대 몇 개까지 — 체험·전시·시즌 행사를 먼저 넣음
+max_shows_in_post: 3

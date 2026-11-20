@@ -23,6 +23,7 @@ import collect_culture  # noqa: E402
 import collect_kopis  # noqa: E402
 import collect_manual  # noqa: E402
 import collect_news  # noqa: E402
+import collect_org  # noqa: E402
 import collect_std  # noqa: E402
 import collect_tour  # noqa: E402
 import draft  # noqa: E402
@@ -69,6 +70,12 @@ def score(ev: Event, kw: dict, wk_end) -> int:
     return s
 
 
+def weekend_open(ev: Event) -> bool:
+    """예약 프로그램에 운영요일이 있으면 토·일 중 하루는 열어야 주말 글에 넣음"""
+    days = next((t for t in ev.tags if t.startswith("운영요일")), "")
+    return not days or "토" in days or "일" in days.replace("운영요일", "")
+
+
 def dedup(events: list[Event]) -> list[Event]:
     best: dict[str, Event] = {}
     for e in events:
@@ -95,7 +102,9 @@ def main() -> None:
     events: list[Event] = []
     if args.sample:
         events = load_sample()
-        status["sample"] = f"{len(events)}건 (샘플)"
+        org = collect_org.sample(today)
+        events += org
+        status["sample"] = f"{len(events)}건 (샘플, 기관 {len(org)}건 포함)"
     else:
         sources = [
             ("tour", "DATA_GO_KR_KEY", collect_tour.collect),
@@ -120,9 +129,17 @@ def main() -> None:
             except Exception as e:  # noqa: BLE001
                 status[name] = f"실패: {e}"[:200]
                 print(f"[경고] {name} 실패: {e}")
-        # 기사 기반 지역 행사 (키 없음)
+        # 기관 홈페이지·예약 페이지 (키 없음, sources.yaml)
         try:
-            got = collect_news.collect(win_start, win_end)
+            got = collect_org.collect(win_start, win_end)
+            events += got
+            status["org"] = f"{len(got)}건 ({json.dumps(collect_org.DEBUG, ensure_ascii=False)})"
+        except Exception as e:  # noqa: BLE001
+            status["org"] = f"실패: {e}"[:200]
+            print(f"[경고] org 실패: {e}")
+        # 기사 기반 지역 행사 (키 없음) — 블로그 지역은 검색어를 더 넓게
+        try:
+            got = collect_news.collect(win_start, win_end, focus=blog_regions)
             events += got
             status["news"] = f"{len(got)}건 ({json.dumps(collect_news.DEBUG, ensure_ascii=False)})"
         except Exception as e:  # noqa: BLE001
@@ -188,12 +205,25 @@ def main() -> None:
                                                  ensure_ascii=False, indent=1), encoding="utf-8")
 
     # 2) 블로그 초안: blog_regions 의 이번 주말 행사, 지역별 상위 N개 고르게
-    max_n = cfg.get("max_events_in_post", 10)
+    max_n = cfg.get("max_events_in_post", 12)
+    max_show = cfg.get("max_shows_in_post", 3)
     per = max(1, max_n // len(blog_regions))
-    post_events = []
+    post_events, shows = [], 0
     for r in blog_regions:
-        post_events += [e for e in picked if e.region == r and e.score >= 3
-                        and overlaps(e, wk_start, wk_end)][:per]
+        cands = [e for e in picked if e.region == r and e.score >= 3 and overlaps(e, wk_start, wk_end)
+                 and weekend_open(e)]
+        # 체험·시즌·전시·축제 먼저, 같은 묶음 안에서는 점수순
+        cands.sort(key=lambda e: (draft.is_show(e), -e.score, e.end))
+        took = 0
+        for e in cands:
+            if took >= per:
+                break
+            if draft.is_show(e):
+                if shows >= max_show:
+                    continue
+                shows += 1
+            post_events.append(e)
+            took += 1
     if not post_events:
         print("[안내] 글에 넣을 행사가 없어 초안은 만들지 않습니다.")
         return
