@@ -241,7 +241,10 @@ def parse_table(doc: str, src: dict, base: date) -> list[Event]:
                 continue
             days = re.search(r"\(([월화수목금토일,·\s]+)\)", cell("period"))
             extra = f"운영요일 {days.group(1).replace(' ', '')}" if days else ""
-            ev = _mk_event(src, title, period, place=cell("place"), price=cell("price"), extra=extra)
+            place = cell("place")
+            if place and place.split()[0] not in title:  # '아동반(10~12월)' → '대전목재문화체험장 아동반(10~12월)'
+                title = f"{place} {title}"
+            ev = _mk_event(src, title, period, place=place, price=cell("price"), extra=extra)
             if extra:
                 ev.tags.append(extra)
             if status:
