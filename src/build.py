@@ -207,6 +207,7 @@ def main() -> None:
     # 2) 블로그 초안: blog_regions 의 이번 주말 행사, 지역별 상위 N개 고르게
     max_n = cfg.get("max_events_in_post", 12)
     max_show = cfg.get("max_shows_in_post", 3)
+    max_kind = cfg.get("max_per_kind_in_region", 3)  # 한 지역에서 같은 묶음(과학관 등)은 최대 몇 개
     per = max(1, max_n // len(blog_regions))
     post_events, shows = [], 0
     for r in blog_regions:
@@ -214,10 +215,14 @@ def main() -> None:
                  and weekend_open(e)]
         # 체험·시즌·전시·축제 먼저, 같은 묶음 안에서는 점수순
         cands.sort(key=lambda e: (draft.is_show(e), -e.score, e.end))
-        took = 0
+        took, kinds = 0, {}
         for e in cands:
             if took >= per:
                 break
+            k = draft.kind_of(e)[0]
+            if kinds.get(k, 0) >= max_kind:
+                continue
+            kinds[k] = kinds.get(k, 0) + 1
             if draft.is_show(e):
                 if shows >= max_show:
                     continue

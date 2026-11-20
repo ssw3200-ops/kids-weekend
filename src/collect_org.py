@@ -299,31 +299,77 @@ def parse_rss(doc: str, src: dict, base: date) -> list[Event]:
 PARSERS = {"links": parse_links, "table": parse_table, "items": parse_items, "rss": parse_rss}
 
 
+PAGE_FIELDS = ["pageIndex", "currentPageNo", "pageNo", "page", "cpage", "curPage", "nowPage"]
+
+
+def _form_fields(doc: str) -> tuple[str, dict, list[str]]:
+    """목록 페이지의 검색 form(숨은 값 포함)과 페이지 번호 칸 이름 후보"""
+    soup = BeautifulSoup(doc, "html.parser")
+    best, fields = "", {}
+    for form in soup.find_all("form"):
+        vals = {i.get("name"): i.get("value", "") for i in form.find_all("input") if i.get("name")}
+        for sel in form.find_all("select"):
+            if sel.get("name"):
+                opt = sel.find("option", selected=True) or sel.find("option")
+                vals[sel["name"]] = (opt.get("value", "") if opt else "")
+        if len(vals) > len(fields):
+            best, fields = form.get("action") or "", vals
+    scripts = " ".join(sc.get_text() for sc in soup.find_all("script"))
+    guess = re.findall(r"(?:name=['\"]?|\.|getElementById\(['\"])(\w*[pP]age\w*)['\"]?\]?\)?\.val(?:ue)?\s*(?:=|\()", scripts)
+    names = [n for n in dict.fromkeys(guess + [k for k in fields if "age" in k.lower()] + PAGE_FIELDS)]
+    return best, fields, names
+
+
 def fetch_pages(src: dict) -> list[str]:
-    """table 은 여러 페이지 (pageIndex 를 GET·POST 로 시도, 같은 내용이면 멈춤)"""
-    first = _get(src["url"])
+    """table 은 여러 페이지: 검색 form 을 그대로 POST 하면서 페이지 칸만 바꿈 (같은 내용이면 멈춤)"""
+    sess = requests.Session()
+    sess.headers.update(UA)
+
+    def get(url: str, data: dict | None = None) -> str:
+        last = None
+        for i in range(2):
+            try:
+                r = sess.get(url, timeout=20) if data is None else \
+                    sess.post(url, data=data, timeout=20, headers={"Referer": src["url"]})
+                r.raise_for_status()
+                if not r.encoding or r.encoding.lower() in ("iso-8859-1", "ascii"):
+                    r.encoding = r.apparent_encoding
+                return r.text
+            except Exception as e:  # noqa: BLE001
+                last = e
+                time.sleep(2 * (i + 1))
+        raise RuntimeError(f"접속 실패: {type(last).__name__}")
+
+    first = get(src["url"])
     docs = [first]
     pages = int(src.get("pages", 1))
     if src.get("type") != "table" or pages <= 1:
         return docs
-    sig = lambda d: re.sub(r"\s+", "", BeautifulSoup(d, "html.parser").get_text())[:3000]  # noqa: E731
+    sig = lambda d: re.sub(r"\s+", "", " ".join(td.get_text() for td in BeautifulSoup(d, "html.parser").find_all("td")))[:4000]  # noqa: E731
     seen = {sig(first)}
+    action, fields, names = _form_fields(first)
+    post_url = urljoin(src["url"], action) if action and not action.startswith("javascript") else src["url"].split("?")[0]
+    base_data = {**_qs(src["url"]), **fields}
+    sep = "&" if "?" in src["url"] else "?"
+    works: tuple[str, str] | None = None  # (방식, 칸이름) — 2쪽에서 찾은 방법을 계속 씀
     for p in range(2, pages + 1):
         got = None
-        sep = "&" if "?" in src["url"] else "?"
-        for kind in ("get", "post"):
+        tries = [works] if works else [(k, n) for n in names for k in ("post", "get")]
+        for kind, n in tries:
             try:
-                d = _get(f"{src['url']}{sep}pageIndex={p}") if kind == "get" else \
-                    _get(src["url"].split("?")[0], data={**_qs(src["url"]), "pageIndex": str(p)})
+                d = get(post_url, {**base_data, n: str(p)}) if kind == "post" else \
+                    get(f"{src['url']}{sep}{n}={p}")
             except RuntimeError:
                 continue
             if sig(d) not in seen:
-                got = d
+                got, works = d, (kind, n)
                 break
         if not got:
             break
         seen.add(sig(got))
         docs.append(got)
+    if works:
+        DEBUG[f"{src['name']} 쪽넘김"] = f"{works[0]} {works[1]}"
     return docs
 
 
