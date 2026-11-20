@@ -10,6 +10,7 @@
 # kid: true  → 기관 자체가 아이·가족 대상 (키워드 없어도 통과)
 # skip       → 제목에 들어가면 뺄 말
 # enabled: false 로 끄기
+# max_days: 기간이 이 날수보다 길면 상설로 보고 뺌 (기본 120)
 #
 # ※ 일부 기관(국립세종도서관 등)은 해외 접속을 막아서 GitHub(미국 서버)에서 안 열릴 수 있어요.
 #   status.json 의 org 항목에서 기관별 결과를 확인하세요.
@@ -85,7 +86,8 @@ sources:
     url: https://child.nmcik.or.kr/exhibitions/current/entire/list
     data: {size: 30, page: 0, search: "", prefix: title}
     list: data.content
-    fields: {title: title, period: date}
+    fields: {title: name, start: startDateTime, end: endDateTime}
+    max_days: 400       # 기획전시는 기간이 길어도 넣음 (기본 120일 넘으면 상설로 보고 뺌)
     link: https://child.nmcik.or.kr/exhibitions/current/all
     place: 국립어린이박물관
     address: 세종특별자치시 어울누리로 130
@@ -94,9 +96,8 @@ sources:
 
   - name: 세종시문화관광재단 문화행사
     region: 세종
-    type: links
+    type: items         # 목록 칸: 제목(strong) + "기간 2026-11-20 ~ 2026-11-20"
     url: https://www.sjcf.or.kr/clturEvent/list.do?key=2111060073
-    link_pattern: clturEvent/view
     genre: 공연 행사
     kid: false        # 어른 공연이 많아서 아이 키워드가 있어야 통과
 

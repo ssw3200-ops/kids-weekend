@@ -332,7 +332,10 @@ def parse_json(doc: str, src: dict, base: date) -> list[Event]:
         if not isinstance(r, dict):
             continue
         title = _clean(str(r.get(f.get("title", "title")) or ""))
-        per_txt = str(r.get(f.get("period", "date")) or "")
+        if f.get("start"):  # 시작·끝 칸이 따로 있는 경우 (전시: startDateTime / endDateTime)
+            per_txt = f"{str(r.get(f['start']) or '')[:10]} ~ {str(r.get(f.get('end', '')) or '')[:10]}"
+        else:
+            per_txt = str(r.get(f.get("period", "date")) or "")
         if not per_txt:  # 날짜 칸 이름을 모르면 날짜처럼 생긴 값을 찾음
             per_txt = " ".join(str(v) for v in r.values() if isinstance(v, str) and re.search(r"20\d{2}[.-]", v))
         period = find_period(per_txt, base)
@@ -467,7 +470,7 @@ def collect(start: date, end: date, path: Path | None = None) -> list[Event]:
             for ev in got:
                 if _skip(ev.title, src, common):
                     continue
-                if ev.end < start or ev.start > end or (ev.end - ev.start).days > 120:
+                if ev.end < start or ev.start > end or (ev.end - ev.start).days > int(src.get("max_days", 120)):
                     continue
                 uniq.setdefault(ev.title, ev)
             out += uniq.values()

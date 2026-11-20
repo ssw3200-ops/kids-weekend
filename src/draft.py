@@ -108,10 +108,10 @@ def event_block(i: int, ev: Event) -> str:
     days = next((t for t in ev.tags if t.startswith("운영요일")), "")
     if days:
         lines.append(f"🗓️ {days} (날짜 안에서 이 요일만)")
-    if ev.source == "org" and any(t in ("접수중", "접수대기") or "신청" in t or "예약" in t for t in ev.tags):
+    if ev.source == "org" and any(t in ("접수중", "접수대기") or "신청" in t or "예약" in t or "접수" in t for t in ev.tags):
         lines.append("📝 사전 예약 필요 — 링크에서 신청")
     point = [t for t in ev.tags if t not in ("무료", "접수중", "접수대기", "기사") and not t.startswith("운영요일")
-             and "신청" not in t
+             and "신청" not in t and "접수" not in t
              and t not in (ev.place,)]
     point = [t for t in point if len(t) <= 12]
     if ev.is_free:
