@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import sys
 import zipfile
@@ -217,9 +218,19 @@ def main() -> None:
         # 체험·시즌·전시·축제 먼저, 같은 묶음 안에서는 점수순
         cands.sort(key=lambda e: (draft.is_show(e), -e.score, e.end))
         # 🎄 시즌 행사(크리스마스·눈썰매 등)는 지역별 개수 제한과 상관없이 먼저 넣음
-        season = [e for e in cands if draft.kind_of(e)[0] == "시즌 행사"][:max_season]
-        post_events += season
-        cands = [e for e in cands if e not in season]
+        def norm(t: str) -> str:
+            return re.sub(r"[\W_]+", "", re.sub(r"\[[^\]]*\]", "", t))
+
+        def dup(e) -> bool:  # '다이소 득템 대전 크리스마스 마켓' vs '득템 대전 크리스마스 마켓'
+            a = norm(e.title)
+            return any(a and (a in norm(x.title) or norm(x.title) in a) for x in post_events)
+
+        season = []
+        for e in cands:
+            if draft.kind_of(e)[0] == "시즌 행사" and len(season) < max_season and not dup(e):
+                season.append(e)
+                post_events.append(e)
+        cands = [e for e in cands if e not in season and not dup(e)]
         took, kinds = 0, {}
         for e in cands:
             if took >= per:
