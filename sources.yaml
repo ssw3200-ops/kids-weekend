@@ -66,6 +66,44 @@ sources:
     genre: 행사
     kid: false
 
+  - name: 국립어린이박물관 교육
+    region: 세종
+    type: links
+    url: https://child.nmcik.or.kr/
+    link_pattern: "."
+    place: 국립어린이박물관
+    address: 세종특별자치시 어울누리로 130
+    genre: 박물관 체험
+    kid: true
+
+  - name: 국립어린이박물관 현재교육
+    region: 세종
+    type: links
+    url: https://child.nmcik.or.kr/edu/current/all
+    link_pattern: "."
+    place: 국립어린이박물관
+    address: 세종특별자치시 어울누리로 130
+    genre: 박물관 체험
+    kid: true
+
+  - name: 국립어린이박물관 전시
+    region: 세종
+    type: links
+    url: https://child.nmcik.or.kr/exhibitions/current/all
+    link_pattern: "."
+    place: 국립어린이박물관
+    address: 세종특별자치시 어울누리로 130
+    genre: 전시
+    kid: true
+
+  - name: 세종시문화관광재단 이달의 문화행사
+    region: 세종
+    type: links
+    url: https://www.sjcf.or.kr/index.do
+    link_pattern: clturEvent/view
+    genre: 공연 행사
+    kid: false        # 어른 공연이 많아서 아이 키워드가 있어야 통과
+
   - name: 세종시청 알림
     region: 세종
     type: links
@@ -82,6 +120,7 @@ sources:
     kid: false
 
   - name: 국립세종도서관
+    enabled: false    # 2026-11-20 해외(GitHub) 접속 차단으로 실패
     region: 세종
     type: links
     url: https://sejong.nl.go.kr/
@@ -91,6 +130,7 @@ sources:
     kid: false
 
   - name: 국립세종수목원
+    enabled: false    # 2026-11-20 해외(GitHub) 접속 차단으로 실패
     region: 세종
     type: links
     url: https://www.sjna.or.kr/

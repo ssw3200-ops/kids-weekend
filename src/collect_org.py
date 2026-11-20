@@ -129,7 +129,7 @@ def _clean(s: str) -> str:
 def _title_from(text: str) -> str:
     """링크 글자에서 행사명: 날짜·장소 앞부분, 앞쪽 분류 꼬리표 제거"""
     t = text
-    t = re.sub(r"^(?:NEW|행사|특별전|교육|공지|알림|긴급|프로그램|전시)\s+", "", t)
+    t = re.sub(r"^(?:(?:NEW|행사|특별전|교육|공지|알림|긴급|프로그램|전시|진행예정|진행중|접수중|접수예정)\s+)+", "", t)
     t = re.sub(r"\S*(?:안내\s*)?포스터로\s*자세한\s*(?:내용|사항)은\s*본\S*\s*참조\S*\s*", "", t)
     cut = _TOKEN.search(t)
     if cut and cut.start() > 4:
@@ -196,7 +196,16 @@ def parse_links(doc: str, src: dict, base: date) -> list[Event]:
         period = find_period(text, base)
         if not period:
             continue
+        if re.match(r"^(?:\S+\s+)?(?:종료|마감)\s", text):  # '종료 공연명 …'
+            continue
         title = _title_from(text)
+        who = ""
+        wm = re.search(r"\s(가족|어린이|영유아|유아|초등|단체|성인|청소년|전체)$", title)
+        if wm:  # 국립어린이박물관: '스타가 떴다! 가족'
+            who = wm.group(1)
+            title = title[:wm.start()].strip()
+            if who in ("단체", "성인", "청소년"):
+                continue
         if len(title) < 3 or title in seen:
             continue
         seen.add(title)
@@ -211,7 +220,7 @@ def parse_links(doc: str, src: dict, base: date) -> list[Event]:
         if m and not src.get("place"):
             place = m.group(0)[:30]
         ev = _mk_event(src, title, period, place=place, price=_price_from(text), link=link)
-        ev.age = age
+        ev.age = age or (f"{who} 대상" if who else "")
         out.append(ev)
     return out
 
@@ -398,6 +407,11 @@ def collect(start: date, end: date, path: Path | None = None) -> list[Event]:
             for d in docs:
                 got += PARSERS[src["type"]](d, src, base)
             raw = len(got)
+            if raw == 0:  # 왜 0건인지 볼 수 있게 받은 페이지 앞부분 저장 (공개 홈페이지 글자만)
+                dbg = ROOT / "docs" / "cache" / "org_debug"
+                dbg.mkdir(parents=True, exist_ok=True)
+                slug = re.sub(r"[^0-9A-Za-z가-힣]", "_", name)
+                (dbg / f"{slug}.html").write_text(docs[0][:60000], encoding="utf-8")
             uniq: dict[str, Event] = {}
             for ev in got:
                 if _skip(ev.title, src, common):
